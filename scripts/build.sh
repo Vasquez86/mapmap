@@ -3,11 +3,52 @@
 # On Mac, install it from http://qt-project.org/downloads
 # set -o verbose
 
+set -euo pipefail
+
 cd $(dirname $0)
 cd ..
 
 #Verify this version matches folder name.
 qtversion=5.10.1
+
+find_qmake() {
+    # Prefer an explicitly provided QMAKE binary, then common Qt5 names.
+    for candidate in "${QMAKE:-}" qmake-qt5 qmake; do
+        if [ -n "$candidate" ] && command -v "$candidate" >/dev/null 2>&1; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+
+    cat <<'EOF' >&2
+qmake (Qt5) was not found.
+On Ubuntu, install the Qt and GStreamer development packages, e.g.:
+  sudo apt-get install -y \\
+      qtbase5-dev qttools5-dev-tools qtmultimedia5-dev \\
+      libqt5opengl5-dev qtwebengine5-dev libqt5multimedia5-plugins \\
+      libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \\
+      gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-plugins-good
+
+Then re-run this script.
+EOF
+    return 1
+}
+
+ensure_gstreamer() {
+    if pkg-config --exists gstreamer-1.0 gstreamer-base-1.0 gstreamer-app-1.0 gstreamer-pbutils-1.0; then
+        return 0
+    fi
+
+    cat <<'EOF' >&2
+GStreamer development files were not detected by pkg-config.
+On Ubuntu, install them with:
+  sudo apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \\
+      gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-plugins-good
+
+Then re-run this script.
+EOF
+    return 1
+}
 
 do_create_dmg() {
     if [ -f DMGVERSION.txt ]
@@ -110,6 +151,8 @@ if [[ $unamestr == "Darwin" ]]; then
     echo "Creating DMG ..."
     do_create_dmg
 elif [[ $unamestr == "Linux" ]]; then
-    qmake
-    make -j4
+    QMAKE_BIN=$(find_qmake)
+    ensure_gstreamer
+    "$QMAKE_BIN"
+    make -j"$(nproc)"
 fi
