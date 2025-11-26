@@ -36,6 +36,11 @@ sudo apt-get install -y \
       qt5-default
 ```
 
+If `qmake` is installed under a versioned name such as `qmake-qt5`, the
+build script will automatically pick it up. You can also set the
+`QMAKE` environment variable to point to the desired binary, e.g.
+`QMAKE=/usr/lib/qt5/bin/qmake`.
+
 Install GStreamer 1.0 libraries and plugins:
 
 ```
